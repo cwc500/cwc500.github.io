@@ -1,75 +1,624 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+    <title>飞机大战</title>
+    <style>
+        *{
+            margin: 0;
+            padding: 0;
+        }
+        #canvas{
+            display: block;
+            margin: 0 auto;
+            width: 480px;
+            height: 650px;
+            border: 1px solid red;
+        }
+    </style>
 </head>
-
 <body>
-    <form action="">
-        <ul>
-            <li>
-                <table>标题:</table>
-            </li>
-            <li><input type="text"></li>
-            <li>
-                <table>缩略图</table>
-            </li>
-            <li>
-                <input type="file" name="file1" id="file1">
-                <img src="" alt="" id="img1">
-            </li>
-        </ul>
-    </form>
+    <canvas id="canvas" width="480" height="650"></canvas>
+    <iframe src="" frameborder="0" width="480" height="650"></iframe>
     <script>
-        var f = document.querySelector("#file1");
-        var img1 = document.querySelector("#img1")
-        f.onchange = function(e) {
-            var f1 = e.target.files[0];
-            console.log(f1);
-            var fsize = f1.size; //尺寸
-            var ftype = f1.type; //类型
-            var fname = f1.name; //名称
-            console.log(fsize, ftype, fname);
-            // if (fsize > 1024) {
-            //     alert("文件过大")
-            //     return false;
-            // }
-            var faar = fname.split(".");
-            type = faar[faar.length - 1];
-            // if (type !== "jpg") {
-            //     alert("类型不对");
-            //     return;
-            // }
-            var freader = new FileReader();
-            freader.readAsDataURL(e.target.files[0])
-            freader.onload = function(e) {
-                console.log(e.target.result);
-                img1.src = e.target.result;
+        //获取canvas
+        const canvas=document.querySelector("#canvas");
+        const context=canvas.getContext('2d');
+        //定义游戏状态
+        //开始
+        const START=0;
+        //开始时
+        const STARTING=1;
+        //运行时
+        const RUNNING=2;
+        //暂停时
+        const PAUSE=3;
+        //结束时
+        const END=4;
+        //加载背景图
+        const bg=new Image();
+        bg.src="./img/background.png";
+        //初始化logo
+        const copyright=new Image();
+        copyright.src="img/logo.png";
+        //初始化暂停图片
+        const pause=new Image();
+        pause.src="img/s.png";
+        //初始化四张飞机大战加载图片
+        const loading_frame=[];
+        loading_frame[0]=new Image();
+        loading_frame[0].src="./img/loading1.png";
+        loading_frame[1]=new Image();
+        loading_frame[1].src="./img/loading2.png";
+        loading_frame[2]=new Image();
+        loading_frame[2].src="./img/loading3.png";
+        
+        const hero_frame={
+            live:[],
+            death:[]
+        }
+        hero_frame.live[0]=new Image();
+        hero_frame.live[0].src="./img/hero1.png";
+        hero_frame.live[1]=new Image();
+        hero_frame.live[1].src="./img/hero2.png";
+        hero_frame.death[0]=new Image();
+        hero_frame.death[0].src="./img/heron3.png";
+        hero_frame.death[1]=new Image();
+        hero_frame.death[1].src="./img/heron2.png";
+        hero_frame.death[2]=new Image();
+        hero_frame.death[2].src="./img/heron1.png";
+        hero_frame.death[3]=new Image();
+        hero_frame.death[3].src="./img/heron4.png";
+
+        const b=new Image();
+        b.src="./img/b.png";
+
+        const e1={
+            // 活
+            live:[],
+            // 死
+            death:[],
+        }
+        e1.live[0]=new Image();
+        e1.live[0].src="./img/x1.png";
+        e1.death[0]=new Image();
+        e1.death[0].src="./img/x2.png";
+        e1.death[1]=new Image();
+        e1.death[1].src="./img/x3.png";
+        e1.death[2]=new Image();
+        e1.death[2].src="./img/x4.png";
+
+        const e2={
+            live:[],
+            death:[],
+        }
+        e2.live[0]=new Image();
+        e2.live[0].src="./img/z1.png";
+        e2.death[0]=new Image();
+        e2.death[0].src="./img/z2.png";
+        e2.death[1]=new Image();
+        e2.death[1].src="./img/z3.png";
+        e2.death[2]=new Image();
+        e2.death[2].src="./img/z4.png";
+
+        const e3={
+            live:[],
+            death:[],
+        }
+        e3.live[0]=new Image();
+        e3.live[0].src="./img/d1.png";
+        e3.live[1]=new Image();
+        e3.live[1].src="./img/d22.png";
+        e3.death[0]=new Image();
+        e3.death[0].src="./img/d2.png";
+        e3.death[1]=new Image();
+        e3.death[1].src="./img/d3.png";
+        e3.death[2]=new Image();
+        e3.death[2].src="./img/d4.png";
+        e3.death[3]=new Image();
+        e3.death[3].src="./img/d5.png";
+        e3.death[4]=new Image();
+        e3.death[4].src="./img/d6.png";
+        let x1=0;
+        let y1=0;
+        let x2=0;
+        let y2=-650;
+        //天空类
+        class Sky{
+            constructor(config){
+                //静态属性
+                //静态图片
+                this.bg=config.bg;
+                // 背景宽度
+                this.width=config.width;
+                // 背景高度
+                this.height=config.height;
+                this.x1=0;
+                this.y1=0;
+                this.x2=0;
+                this.y2=-this.height;
+                //速度
+                this.speed=config.speed;
+                //初始时间
+                //最后更新时间
+                this.lastTime=new Date().getTime();
+            }
+            //动态方法
+            //判断方法
+            //判断这个时间段天空是否需要移动
+            judge(){
+                let currenTime=new Date().getTime();
+                if(currenTime-this.lastTime>this.speed){
+                    this.y1++;
+                    this.y2++;
+                    //时间的更新
+                    this.lastTime=currenTime;   
+                }
+                if(this.y2===0){
+                    this.y1=0;
+                    this.y2=-this.height;
+                }
+            }
+            //绘图方法
+            paint(context){
+                context.drawImage(this.bg,this.x1,this.y1,this.width,this.height);
+                context.drawImage(this.bg,this.x2,this.y2,this.width,this.height);
+                //当第二张图片滚到下面的是后 需要两张图片回到初始状态
             }
         }
-        $.ajax({
-            type: "post",
-            url: "https://hekk-8g0q9nf0b64c30a6-1304707280.tcloudbaseapp.com/alibaixiu/index.html",
-            data: formdata,
-            dataType: 'json',
-            processData: false, // 告诉jQuery不要去处理发送的数据
-            contentType: false, // 告诉jQuery不要去设置Content-Type请求头
-            xhrFields: {
-                withCredentials: true
-            },
-            async: true, //默认是true：异步，false：同步。
-            success: function(data) {
-                callback(data);
-            },
-            error: function(data) {
-                layer.msg('请求异常');
-            },
-        });
+        //天空配置项
+        const SKY={
+            bg:bg,
+            width:480,
+            height:650,
+            // 十毫秒变化一次
+            speed:10,
+        };
+        //飞机加载页面配置项
+        const LOADING={
+            frame:loading_frame,
+            width:186,
+            height:38,
+            x:0,
+            y:650-38,
+            speed:200,
+        }
+        //初始化英雄类配置项
+        const HERO={
+            frame:hero_frame,
+            width:99,
+            height:124,
+            x:0,
+            y:0,
+            speed:100,
+        }
+        //子弹配置项
+        const BULLTE={
+            img:b,
+            width:8,
+            height:20,
+        }
+        const E1={
+            //小飞机配置项
+            type:1,
+            width:57,
+            height:51,
+            //生命
+            life:1,
+            score:1,
+            // 图库
+            frame:e1,
+            minSpeed:20,
+            maxSpeed:10,
+        };
+        const E2={
+            //小飞机配置项
+            type:2,
+            width:69,
+            height:95,
+            //生命
+            life:5,
+            score:5,
+            // 图库
+            frame:e2,
+            minSpeed:50,
+            maxSpeed:20,
+        };
+        const E3={
+            //大飞机配置项
+            //小飞机配置项
+            type:3,
+            width:169,
+            height:258,
+            //生命
+            life:20,
+            score:20,
+            // 图库
+            frame:e3,
+            minSpeed:100,
+            maxSpeed:100,
+        };
+        //初始化一个飞机界面加载类
+        class Loading{
+            constructor(config){
+                //图片组
+                this.frame=config.frame;
+                //数组下标表示第几张图
+                this.frameIndex=0;
+                this.width=config.width;
+                this.height=config.height;
+                this.x=config.x;
+                this.y=config.y;
+                this.speed=config.speed;
+                this.lastTime=new Date().getTime();
+            }
+            judge(){
+                //获取之前时间
+                //获取speed
+                //获取当前时间
+                const currenTime=new Date().getTime();
+                if(currenTime - this.lastTime>this.speed){
+                    this.frameIndex++;
+                    if(this.frameIndex===4){
+                        state=RUNNING;
+                    }
+                    this.lastTime=currenTime;
+                    console.log(1);
+                }
+            }
+            paint(context){
+                context.drawImage(this.frame[this.frameIndex],this.x,this.y)
+            }
+        }
+        //初始化英雄泪
+        class Hero{
+            constructor(config){
+                this.width=config.width;
+                this.height=config.height;
+                this.x=(480-config.width)/2;
+                this.y=650-config.height;
+                this.frame=config.frame;
+                this.frameLiveIdex=0;
+                this.frameDeathIndex=0;
+                this.lastTime=new Date().getTime();
+                this.speed=config.speed;
+                //当前图片
+                this.img=null;
+                this.live=true;
+                //子弹上次射击时间
+                this.lastShooTime=new Date().getTime();
+                this.shootInterval=200;
+                //子弹夹数组
+                this.bulletList=[];
+                this.destory=false;
+            }
+            judge(){
+                const currenTime=new Date().getTime();
+                if(currenTime-this.lastTime>this.speed){
+                    if(this.live){
+                        this.img=this.frame.live[this.frameLiveIdex++%this.frame.live.length];
+                    }else{
+                        this.img=this.frame.death[this.frameDeathIndex++];
+                        if(this.frame.frameDeathIndex===this.frame.death.length){
+                            this.destory=true;
+                        }
+                    }
+                    this.lastTime=currenTime;
+                }
+            }
+            paint(context){
+                context.drawImage(this.img,this.x,this.y,this.width,this.height);
+            }
+            shoot(){
+                const currenTime=new Date().getTime();
+                if(currenTime-this.lastShooTime>this.shootInterval){
+                    //在飞机的头部绘制一个子丹对象
+                    let bullet=new Bullet(BULLTE,this.x+this.width/2-BULLTE.width/2,this.y-BULLTE.height);
+                    //英雄飞机认领这可子丹
+                    this.bulletList.push(bullet);
+                    bullet.paint(context);
+                    //更新英雄射击时间
+                    this.lastShooTime=currenTime;
+                }
+            }
+            collide(){
+                this.live=true;
+            }
+        }
+        //初始化一个子弹类
+        class Bullet{
+            constructor(config,x,y){
+                this.img=config.img;
+                this.widht=config.width;
+                this.height=config.height;
+                this.x=x;
+                this.y=y;
+                this.destory=false;
+            }
+            //子弹绘制方法
+            paint(context){
+                context.drawImage(this.img,this.x,this.y)
+            }
+            //子弹移动this.y--
+            move(){
+                this.y-=2
+            }
+            outOfBounds(){
+                return this.y<this.height; 
+            }
+            collide(){
+                this.destory=true;
+            }
+        }
+        //初始化一个天空示例
+        class Enemy{
+            constructor(config){
+                //敌机类型
+                this.type=config.type;
+                //宽度
+                this.width=config.width;
+                //高度
+                this.height=config.height;
+                //敌机初始化位置
+                this.x=Math.floor(Math.random()*(480-config.width));
+                this.y=-config.height;
+                //敌机生命
+                this.life=config.life;
+                //敌机分数
+                this.score=config.score;
+                //图片库
+                this.frame=config.frame;
+                //此时此刻展示的图片
+                this.img=config.frame.live[0];
+                //活着的标识
+                this.live=true;
+                //最小速度
+                // this.minSpeed=config.minSpeed;
+                //最大速度
+                // this.maxSpeed=config.maxSpeed;
+                this.speed=Math.floor(Math.random()*(config.minSpeed-config.maxSpeed+1))+config.maxSpeed;
+                //最后时间标识
+                this.lastTime=new Date().getTime();
+                //死亡下边o
+                this.deathIndex=0;
+                //确认销毁
+                this.destory=false;
+            }
+            move(){
+                const currenTime=new Date().getTime();
+                if(currenTime-this.lastTime>=this.speed){
+                    if(this.live){
+                        this.img=this.frame.live[0];
+                        this.y++;
+                    }else{
+                        this.img=this.frame.death[this.deathIndex++]
+                        if(this.deathIndex===this.frame.death.length){
+                            this.destory=true;
+                        }
+                    }
+                    this.lastTime=currenTime;
+                }
+            }
+            //渲染敌机
+            paint(context){
+                context.drawImage(this.img,this.x,this.y);
+            }
+            outOfBounds(){
+                if(this.y>650){
+                    return true;
+                }
+            }
+            //判断敌机是否和子弹碰撞
+            //敌机e
+            //子弹o
+            hit(o){
+                //其他物体的左边
+                let ol=o.x;
+                //其他物品的右边
+                let or=o.x+o.width;
+                //其他物品的顶边
+                let ot=o.y;
+                //其他物品的底边
+                let ob=o.y+o.height;
+                //敌机左边
+                let el=this.x;
+                //敌机右边
+                let er=this.x+this.width
+                //敌机顶边
+                let et=this.y
+                //敌机底边
+                let eb=this.y+this.height;
+                //判断是否碰到
+                if(ol>el||or<el||ot>eb||ob<et){
+                    //没碰到
+                    return false;
+                }else{
+                    //碰到了
+                    return true;
+                }
+            }
+            // outOfBounds(){}
+            collide(){
+                //生命减少
+                this.life--;
+                if(this.life===0){
+                    this.live=false;
+                    score+=this.score;
+                }
+            }
+        }
+        const sky=new Sky(SKY);
+        //飞机加载示例
+        const loading=new Loading(LOADING);
+        //初始化英雄实例
+        const hero=new Hero(HERO);
+        let state=START;//表示游戏状态
+        //给canvas绑定一个点击事件
+        canvas.addEventListener('click',()=>{
+            if(state===START){
+                state=STARTING;
+            }
+        })
+        canvas.addEventListener('mousemove',(e)=>{
+            hero.x=e.offsetX-hero.width/2;
+            hero.y=e.offsetY-hero.height/2;
+        })
+        canvas.addEventListener('mouseleave',()=>{
+            if(state===RUNNING){
+                state=PAUSE;
+            }
+        })
+        canvas.addEventListener('mouseenter',()=>{
+            if(state===PAUSE){
+                state=RUNNING;
+            }
+        })
+        function checkHit(){
+            for(let i=0;i<enemies.length;i++){
+                if(enemies[i].hit(hero)){
+                        enemies[i].collide();
+                        hero.collide();
+                    }
+                for(let j=0;j<hero.bulletList.length;j++){
+
+                    enemies[i].hit(hero.bulletList[j])
+                    //用第i架敌机和第j个敌机进行碰撞检测
+                    if(enemies[i].hit(hero.bulletList[j])){
+                        //清除这架敌机和这颗子弹
+                        enemies[i].collide();
+                        hero.bulletList[j].collide();
+                    }
+                }
+            }
+        }
+        //装着敌机实例
+        let enemies=[];
+        //飞机产生速度
+        let ENEMY_CRATE_INTERVAL=800;
+        let ENEMY_LASTTIME=new Date().getTime();
+                //全局函数 每隔一段时间初始化一架敌机
+        let score=0;
+        let life=3;        
+        function createComponent(){
+            const currenTime=new Date().getTime();
+            if(currenTime-ENEMY_LASTTIME>=ENEMY_CRATE_INTERVAL){
+                //当时间满足残生一家飞机放到数组中
+                enemies.push(new Enemy(E1));
+                //小飞机60 中飞机30 大飞机10
+                let ran=Math.floor(Math.random()*100);
+                if(ran<60){
+                    enemies.push(new Enemy(E1));
+                }else if(ran<90&&ran>60){
+                    enemies.push(new Enemy(E2));
+                }else{
+                    enemies.push(new Enemy(E3));
+                }
+                //更新时间
+                ENEMY_LASTTIME=currenTime;
+            }
+        }
+        //全局函数 来判断所有的子丹/敌人组件
+        function judgeComponent(){
+            for(let i=0;i<hero.bulletList.length;i++){
+                hero.bulletList[i].move();
+            }
+            for(let i=0;i<enemies.length;i++){
+                enemies[i].move();
+            }
+        }
+        //全局函数 来绘制所有的子丹/敌人组件
+        function paintComponet(){
+            for(let i=0;i<hero.bulletList.length;i++){
+                hero.bulletList[i].paint(context);
+            }
+            for(let i=0;i<enemies.length;i++){
+                enemies[i].paint(context);
+            }
+            context.font="20px 微软雅黑";
+            context.textAlign="left";
+            context.fillText("score:"+score,15,15);
+            context.fillText("life:"+life,15,35);
+        }
+        //全局函数 来销毁所有的子丹/敌人组件
+        function deleteComponent(){
+            if(hero.destory){
+                //游戏结束
+                state=END;
+            }
+            for(let i=0;i<hero.bulletList.length;i++){
+                //判断有无飞出边界
+                if(hero.bulletList[i].outOfBounds()||hero.bulletList[i].destory){
+                    //splice操作为 操作数
+                    hero.bulletList.splice(i,1)
+                }
+            }
+            for(let i=0;i<enemies.length;i++){
+                if(enemies[i].outOfBounds()||enemies[i].destory){
+                    enemies.splice(i,1);
+                }
+            }
+        }
+                // image加载图片对象
+        //dx图片绘制x坐标
+        //dy图片绘制y坐标
+        // dwidth
+        bg.addEventListener('load',()=>{
+            //保证页面一个刷新率 一直再刷新 但是实际位置的判断交给每个实例
+            setInterval(()=>{
+                switch(state){
+                    case START:
+                    // console.log("开始了")
+                    //渲染移动天空
+                sky.paint(context);
+                sky.judge();
+                //渲染logo
+                let log_x=(480-copyright.naturalWidth)/2;
+                let log_y=(650-copyright.naturalHeight)/2;
+                context.drawImage(copyright,log_x,log_y);
+                    break;
+                    case STARTING:
+                    // console.log("开始时")
+                    sky.paint(context);
+                    loading.judge();
+                    loading.paint(context);
+                sky.judge();
+                    //渲染移动天空
+                    //加载类
+
+                    break;
+                    case RUNNING:
+                    console.log('运行时')
+                    sky.judge();
+                    sky.paint(context);
+                    hero.judge();
+                    hero.paint(context);
+                    hero.shoot();
+                    createComponent();
+                    judgeComponent();
+                    paintComponet();
+                    deleteComponent();
+                    checkHit();
+                    //渲染移动天空
+                    //渲染我方飞机和地方飞机
+                    break;
+                    case PAUSE:
+                    // console.log('暂停时')
+                    //渲染暂停图标
+                    let pause_x=(480-pause.naturalWidth)/2;
+                let pause_y=(650-pause.naturalHeight)/2;
+                context.drawImage(pause,pause_x,pause_y);
+                    break;
+                    case END:
+                    console.log('结束时')
+                    //渲染geover
+                    context.font="blod 24px 微软雅黑";
+                    context.fillText("死了",100,100)
+                    break;
+                }
+            },10)
+        })
     </script>
 </body>
-
 </html>
